@@ -1065,7 +1065,16 @@ use_homebrew_readline() {
 }
 
 has_broken_mac_openssl() {
-  is_mac || return 1
+  if ! is_mac; then
+    # Ruby <= 2.3 needs OpenSSL 1.0.2
+    local ruby_version=$(basename "$DEFINITION_PATH")
+    local major="${ruby_version%%.*}"
+    local minor_patch="${ruby_version#*.}"
+    local minor="${minor_patch%%.*}"
+    local condition=$(($major == 2 && $minor <= 3))
+    echo "Should build openssl for $ruby_version (major=$major, minor=$minor): $condition"
+    return $((1 - $condition))
+  fi
   local openssl_version="$(/usr/bin/openssl version 2>/dev/null || true)"
   [[ $openssl_version = "OpenSSL 0.9.8"?* || $openssl_version = "LibreSSL"* ]] &&
   [[ "$RUBY_CONFIGURE_OPTS" != *--with-openssl-dir=* ]]
@@ -1111,10 +1120,18 @@ build_package_mac_openssl() {
 
   build_package_standard "$@"
 
-  # Extract root certs from the system keychain in .pem format and rehash.
   local pem_file="$OPENSSLDIR/cert.pem"
-  security find-certificate -a -p /Library/Keychains/System.keychain > "$pem_file"
-  security find-certificate -a -p /System/Library/Keychains/SystemRootCertificates.keychain >> "$pem_file"
+  if is_mac; then
+    # Extract root certs from the system keychain in .pem format and rehash.
+    security find-certificate -a -p /Library/Keychains/System.keychain > "$pem_file"
+    security find-certificate -a -p /System/Library/Keychains/SystemRootCertificates.keychain >> "$pem_file"
+  else
+    # See https://github.com/rubygems/rubygems/issues/2415#issuecomment-509806259
+    # Debian-based logic:
+    rm -rf "$OPENSSLDIR/certs" "$pem_file"
+    ln -s /etc/ssl/certs "$OPENSSLDIR"
+    ln -s /etc/ssl/certs/ca-certificates.crt "$pem_file"
+  fi
 }
 
 # Post-install check that the openssl extension was built.
