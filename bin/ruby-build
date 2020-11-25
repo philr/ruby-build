@@ -1127,10 +1127,18 @@ build_package_mac_openssl() {
     security find-certificate -a -p /System/Library/Keychains/SystemRootCertificates.keychain >> "$pem_file"
   else
     # See https://github.com/rubygems/rubygems/issues/2415#issuecomment-509806259
-    # Debian-based logic:
-    rm -rf "$OPENSSLDIR/certs" "$pem_file"
-    ln -s /etc/ssl/certs "$OPENSSLDIR"
-    ln -s /etc/ssl/certs/ca-certificates.crt "$pem_file"
+    if [ -e /etc/pki/tls/cert.pem ]; then # RedHat
+      rm -rf "$OPENSSLDIR/certs" "$pem_file"
+      ln -s /etc/pki/tls/certs "$OPENSSLDIR"
+      ln -s /etc/pki/tls/cert.pem "$pem_file"
+    elif [ -e /etc/ssl/certs/ca-certificates.crt ]; then # Debian
+      rm -rf "$OPENSSLDIR/certs" "$pem_file"
+      ln -s /etc/ssl/certs "$OPENSSLDIR"
+      ln -s /etc/ssl/certs/ca-certificates.crt "$pem_file"
+    else
+      echo "Could not find OpenSSL certificates" >&2
+      exit 1
+    fi
   fi
 }
 
