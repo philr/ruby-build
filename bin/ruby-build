@@ -1077,7 +1077,7 @@ has_broken_mac_openssl() {
     local major="${ruby_version%%.*}"
     local minor_patch="${ruby_version#*.}"
     local minor="${minor_patch%%.*}"
-    local condition=$(($major == 2 && $minor <= 3))
+    local condition=$(($major == 2 && $minor <= 3 || $major < 2))
     echo "Should build openssl for $ruby_version (major=$major, minor=$minor): $condition"
     return $((1 - $condition))
   fi
