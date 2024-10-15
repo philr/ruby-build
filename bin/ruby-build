@@ -738,8 +738,19 @@ build_package_jruby() {
 }
 
 install_jruby_launcher() {
+  # jruby-launcher fails to install normally:
+  #   ERROR:  Could not find a valid gem 'jruby-launcher' (>= 0) in any repository
+  #   ERROR:  Possible alternatives: jruby-launcher
+  # Download and install from a file instead.
+  local version='1.1.19-java'
+  local file="jruby-launcher-$version.gem"
+  local url="https://rubygems.org/downloads/$file"
+  local checksum='2cf1aba4d72c74b36aecc4a30b18925e1e21faf70f56e0b4ca4532518aae189a'
+  cd "$BUILD_PATH"
+  download_tarball "$url" "$file" "$checksum"
+  local path="$BUILD_PATH/$file"
   cd "${PREFIX_PATH}/bin"
-  { ./ruby gem install jruby-launcher
+  { ./ruby gem install "$path"
   } >&4 2>&1
 }
 
